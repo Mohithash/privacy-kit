@@ -23,6 +23,7 @@ class SettingsDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, nu
 
         const val STATUS_INSTALLED = "installed"
         const val STATUS_FAILED = "failed"
+        const val STATUS_NOT_APPLICABLE = "not_applicable"
     }
 
     override fun onCreate(db: SQLiteDatabase) {

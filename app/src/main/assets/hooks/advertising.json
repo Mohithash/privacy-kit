@@ -1,0 +1,22 @@
+{
+  "hooks": [
+    {
+      "id": "ads.advertisingId",
+      "className": "com.google.android.gms.ads.identifier.AdvertisingIdClient$Info",
+      "methodName": "getId",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override",
+      "description": "Spoofs the Google Advertising ID (GAID) returned to apps that bundle Play Services ads-identifier. Not applicable to apps that don't use it."
+    },
+    {
+      "id": "ads.isLimitAdTrackingEnabled",
+      "className": "com.google.android.gms.ads.identifier.AdvertisingIdClient$Info",
+      "methodName": "isLimitAdTrackingEnabled",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override_boolean",
+      "description": "Overrides whether limit-ad-tracking is reported as enabled."
+    }
+  ]
+}

@@ -40,6 +40,12 @@ class HookEngine(private val context: Context, moduleAssets: android.content.res
                     context, packageName, definition.id,
                     com.xplex.privacy.data.SettingsDatabase.STATUS_INSTALLED, null
                 )
+            } catch (t: ClassNotFoundException) {
+                recordNotApplicable(packageName, definition, t)
+            } catch (t: NoSuchMethodException) {
+                recordNotApplicable(packageName, definition, t)
+            } catch (t: NoSuchFieldException) {
+                recordNotApplicable(packageName, definition, t)
             } catch (t: Throwable) {
                 Log.e(TAG, "Failed to install hook ${definition.id} for $packageName", t)
                 SettingsClient.recordDiagnostic(
@@ -48,6 +54,20 @@ class HookEngine(private val context: Context, moduleAssets: android.content.res
                 )
             }
         }
+    }
+
+    /**
+     * A class/method/field that simply doesn't exist in this app (e.g.
+     * AdvertisingIdClient, which only exists in apps bundling Play Services'
+     * ads-identifier library) isn't an install failure - it's an expected,
+     * normal outcome that shouldn't show up as an error in diagnostics.
+     */
+    private fun recordNotApplicable(packageName: String, definition: HookDefinition, t: Throwable) {
+        Log.i(TAG, "Hook ${definition.id} not applicable to $packageName: $t")
+        SettingsClient.recordDiagnostic(
+            context, packageName, definition.id,
+            com.xplex.privacy.data.SettingsDatabase.STATUS_NOT_APPLICABLE, t.toString()
+        )
     }
 
     private fun installFieldHook(packageName: String, classLoader: ClassLoader, definition: HookDefinition) {

@@ -50,10 +50,18 @@ class FingerprintRandomizerTest {
             "device.build.model", "device.build.manufacturer", "device.build.brand",
             "device.build.getSerial", "telephony.deviceId", "telephony.imei",
             "telephony.subscriberId", "telephony.simSerialNumber", "telephony.line1Number",
-            "settings.androidId", "wifi.macAddress", "bluetooth.address"
+            "settings.androidId", "wifi.macAddress", "bluetooth.address",
+            "ads.advertisingId", "ads.isLimitAdTrackingEnabled"
         )
         assertEquals(expectedIds, profile.keys)
         profile.values.forEach { assertTrue(it.isNotBlank()) }
+    }
+
+    @Test
+    fun `random advertising id matches the real GAID UUID shape`() {
+        val gaid = FingerprintRandomizer.randomAdvertisingId(Random(11))
+        val uuidPattern = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+        assertTrue("expected $gaid to match UUID shape", uuidPattern.matches(gaid))
     }
 
     @Test

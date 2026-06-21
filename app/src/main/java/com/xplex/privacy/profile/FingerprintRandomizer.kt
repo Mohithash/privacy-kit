@@ -25,7 +25,9 @@ object FingerprintRandomizer {
             "telephony.line1Number" to randomPhoneNumber(random),
             "settings.androidId" to randomAndroidId(random),
             "wifi.macAddress" to randomMacAddress(random),
-            "bluetooth.address" to randomMacAddress(random)
+            "bluetooth.address" to randomMacAddress(random),
+            "ads.advertisingId" to randomAdvertisingId(random),
+            "ads.isLimitAdTrackingEnabled" to "false"
         )
     }
 
@@ -83,5 +85,11 @@ object FingerprintRandomizer {
     fun randomSerial(random: Random = Random): String {
         val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         return (1..8).map { chars[random.nextInt(chars.length)] }.joinToString("")
+    }
+
+    /** Real GAID format is a random UUID (8-4-4-4-12 lowercase hex), per Google's spec. */
+    fun randomAdvertisingId(random: Random = Random): String {
+        fun hex(count: Int) = (1..count).map { "0123456789abcdef"[random.nextInt(16)] }.joinToString("")
+        return "${hex(8)}-${hex(4)}-${hex(4)}-${hex(4)}-${hex(12)}"
     }
 }
