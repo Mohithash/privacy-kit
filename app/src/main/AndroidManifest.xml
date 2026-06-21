@@ -34,5 +34,11 @@
             </intent-filter>
         </activity>
 
+        <provider
+            android:name=".data.PrivacyContentProvider"
+            android:authorities="com.xplex.privacy.provider"
+            android:exported="true"
+            android:process=":provider" />
+
     </application>
 </manifest>

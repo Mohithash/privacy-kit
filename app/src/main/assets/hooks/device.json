@@ -1,0 +1,40 @@
+{
+  "hooks": [
+    {
+      "id": "device.build.model",
+      "className": "android.os.Build",
+      "methodName": "#MODEL",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override",
+      "description": "Spoofs Build.MODEL for this app, if a fingerprint profile sets one."
+    },
+    {
+      "id": "device.build.manufacturer",
+      "className": "android.os.Build",
+      "methodName": "#MANUFACTURER",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override",
+      "description": "Spoofs Build.MANUFACTURER for this app."
+    },
+    {
+      "id": "device.build.brand",
+      "className": "android.os.Build",
+      "methodName": "#BRAND",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override",
+      "description": "Spoofs Build.BRAND for this app."
+    },
+    {
+      "id": "device.build.getSerial",
+      "className": "android.os.Build",
+      "methodName": "getSerial",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override",
+      "description": "Spoofs Build.getSerial() for this app."
+    }
+  ]
+}
