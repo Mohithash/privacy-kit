@@ -17,12 +17,16 @@ const val METHOD_IS_HOOK_ENABLED = "isHookEnabled"
 const val METHOD_GET_ENABLED_HOOK_IDS = "getEnabledHookIds"
 const val METHOD_SET_HOOK_ENABLED = "setHookEnabled"
 const val METHOD_RESET_PACKAGE = "resetPackage"
+const val METHOD_RECORD_DIAGNOSTIC = "recordDiagnostic"
+const val METHOD_GET_DIAGNOSTICS = "getDiagnostics"
 
 const val ARG_PACKAGE = "package"
 const val ARG_NAME = "name"
 const val ARG_VALUE = "value"
 const val ARG_HOOK_ID = "hookId"
 const val ARG_ENABLED = "enabled"
+const val ARG_STATUS = "status"
+const val ARG_MESSAGE = "message"
 
 /**
  * Exposed as eu.faircode-style cross-process IPC: hooked apps call in to
@@ -101,6 +105,21 @@ class PrivacyContentProvider : ContentProvider() {
             METHOD_RESET_PACKAGE -> {
                 db.resetPackage(packageName)
                 Bundle()
+            }
+
+            METHOD_RECORD_DIAGNOSTIC -> {
+                val hookId = extras.getString(ARG_HOOK_ID) ?: return null
+                val status = extras.getString(ARG_STATUS) ?: return null
+                db.recordDiagnostic(packageName, hookId, status, extras.getString(ARG_MESSAGE))
+                Bundle()
+            }
+
+            METHOD_GET_DIAGNOSTICS -> Bundle().apply {
+                val entries = db.getDiagnostics(packageName)
+                putStringArray("hookIds", entries.map { it.hookId }.toTypedArray())
+                putStringArray("statuses", entries.map { it.status }.toTypedArray())
+                putStringArray("messages", entries.map { it.message ?: "" }.toTypedArray())
+                putLongArray("timestamps", entries.map { it.timestamp }.toLongArray())
             }
 
             else -> {

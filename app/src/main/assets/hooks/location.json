@@ -1,0 +1,31 @@
+{
+  "hooks": [
+    {
+      "id": "location.isFromMockProvider",
+      "className": "android.location.Location",
+      "methodName": "isFromMockProvider",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "hide_mock_provider",
+      "description": "Always reports false from Location.isFromMockProvider(), hiding that a location came from a mock/test provider."
+    },
+    {
+      "id": "location.getLatitude",
+      "className": "android.location.Location",
+      "methodName": "getLatitude",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override_double",
+      "description": "Overrides Location.getLatitude() for this app, if a fake coordinate is set."
+    },
+    {
+      "id": "location.getLongitude",
+      "className": "android.location.Location",
+      "methodName": "getLongitude",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override_double",
+      "description": "Overrides Location.getLongitude() for this app, if a fake coordinate is set."
+    }
+  ]
+}

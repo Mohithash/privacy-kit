@@ -70,4 +70,25 @@ object SettingsClient {
     fun resetPackage(context: Context, packageName: String) {
         call(context, METHOD_RESET_PACKAGE, packageName)
     }
+
+    fun recordDiagnostic(context: Context, packageName: String, hookId: String, status: String, message: String?) {
+        call(context, METHOD_RECORD_DIAGNOSTIC, packageName) {
+            putString(ARG_HOOK_ID, hookId)
+            putString(ARG_STATUS, status)
+            message?.let { putString(ARG_MESSAGE, it) }
+        }
+    }
+
+    data class DiagnosticEntry(val hookId: String, val status: String, val message: String?, val timestamp: Long)
+
+    fun getDiagnostics(context: Context, packageName: String): List<DiagnosticEntry> {
+        val result = call(context, METHOD_GET_DIAGNOSTICS, packageName) ?: return emptyList()
+        val hookIds = result.getStringArray("hookIds") ?: return emptyList()
+        val statuses = result.getStringArray("statuses") ?: return emptyList()
+        val messages = result.getStringArray("messages") ?: return emptyList()
+        val timestamps = result.getLongArray("timestamps") ?: return emptyList()
+        return hookIds.indices.map { i ->
+            DiagnosticEntry(hookIds[i], statuses[i], messages.getOrNull(i)?.ifBlank { null }, timestamps[i])
+        }
+    }
 }

@@ -129,10 +129,18 @@ fun ProfileEditorScreen(packageName: String, appLabel: String, onBack: () -> Uni
     var currentValues by remember(packageName) {
         mutableStateOf(repository.currentValues(packageName))
     }
+    var enabledIds by remember(packageName) {
+        mutableStateOf(repository.enabledHookIds(packageName))
+    }
+    var diagnostics by remember(packageName) {
+        mutableStateOf(com.xplex.privacy.data.SettingsClient.getDiagnostics(context, packageName))
+    }
     var statusMessage by remember { mutableStateOf<String?>(null) }
 
     fun refresh() {
         currentValues = repository.currentValues(packageName)
+        enabledIds = repository.enabledHookIds(packageName)
+        diagnostics = com.xplex.privacy.data.SettingsClient.getDiagnostics(context, packageName)
     }
 
     Scaffold(topBar = {
@@ -173,11 +181,51 @@ fun ProfileEditorScreen(packageName: String, appLabel: String, onBack: () -> Uni
 
             statusMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 
+            val failed = diagnostics.filter { it.status == com.xplex.privacy.data.SettingsDatabase.STATUS_FAILED }
+            if (failed.isNotEmpty()) {
+                Text(
+                    "${failed.size} hook(s) failed to install on this app - they had no effect",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    failed.forEach { entry ->
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text(entry.hookId, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    entry.message ?: "unknown error",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             Text("Current values", style = MaterialTheme.typography.titleMedium)
 
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 items(allHooks, key = { it.id }) { hook ->
-                    HookValueCard(hook = hook, value = currentValues[hook.id])
+                    HookValueCard(
+                        hook = hook,
+                        value = currentValues[hook.id],
+                        enabled = hook.id in enabledIds,
+                        onSave = { newValue ->
+                            repository.setValue(packageName, hook.id, newValue)
+                            repository.setHookEnabled(packageName, hook.id, true)
+                            refresh()
+                            statusMessage = "Saved ${hook.id}"
+                        },
+                        onEnabledChange = { isEnabled ->
+                            repository.setHookEnabled(packageName, hook.id, isEnabled)
+                            refresh()
+                        }
+                    )
                 }
             }
         }
@@ -185,14 +233,41 @@ fun ProfileEditorScreen(packageName: String, appLabel: String, onBack: () -> Uni
 }
 
 @Composable
-private fun HookValueCard(hook: HookDefinition, value: String?) {
+private fun HookValueCard(
+    hook: HookDefinition,
+    value: String?,
+    enabled: Boolean,
+    onSave: (String) -> Unit,
+    onEnabledChange: (Boolean) -> Unit
+) {
+    var editedValue by rememberSaveable(hook.id, value) { mutableStateOf(value.orEmpty()) }
+
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(hook.description.ifBlank { hook.id }, style = MaterialTheme.typography.bodyMedium)
-            Text(
-                value ?: "(unset - real value passes through)",
-                style = MaterialTheme.typography.bodySmall
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Text(hook.description.ifBlank { hook.id }, style = MaterialTheme.typography.bodyMedium)
+                androidx.compose.material3.Switch(checked = enabled, onCheckedChange = onEnabledChange)
+            }
+
+            TextField(
+                value = editedValue,
+                onValueChange = { editedValue = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("real value passes through if unset") },
+                singleLine = true
             )
+
+            TextButton(
+                onClick = { onSave(editedValue) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = editedValue.isNotBlank() && editedValue != value
+            ) {
+                Text("Save")
+            }
         }
     }
 }

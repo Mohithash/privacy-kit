@@ -19,6 +19,10 @@ class SettingsDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, nu
 
         const val TABLE_SETTINGS = "settings"
         const val TABLE_ASSIGNMENTS = "assignments"
+        const val TABLE_DIAGNOSTICS = "diagnostics"
+
+        const val STATUS_INSTALLED = "installed"
+        const val STATUS_FAILED = "failed"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -34,6 +38,15 @@ class SettingsDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, nu
                 "package TEXT NOT NULL, " +
                 "hookId TEXT NOT NULL, " +
                 "enabled INTEGER NOT NULL DEFAULT 1, " +
+                "PRIMARY KEY (package, hookId))"
+        )
+        db.execSQL(
+            "CREATE TABLE $TABLE_DIAGNOSTICS (" +
+                "package TEXT NOT NULL, " +
+                "hookId TEXT NOT NULL, " +
+                "status TEXT NOT NULL, " +
+                "message TEXT, " +
+                "timestamp INTEGER NOT NULL, " +
                 "PRIMARY KEY (package, hookId))"
         )
     }
@@ -115,5 +128,47 @@ class SettingsDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, nu
     fun resetPackage(packageName: String) {
         writableDatabase.delete(TABLE_SETTINGS, "package = ?", arrayOf(packageName))
         writableDatabase.delete(TABLE_ASSIGNMENTS, "package = ?", arrayOf(packageName))
+        writableDatabase.delete(TABLE_DIAGNOSTICS, "package = ?", arrayOf(packageName))
+    }
+
+    fun recordDiagnostic(packageName: String, hookId: String, status: String, message: String?) {
+        val values = ContentValues().apply {
+            put("package", packageName)
+            put("hookId", hookId)
+            put("status", status)
+            put("message", message)
+            put("timestamp", System.currentTimeMillis())
+        }
+        writableDatabase.insertWithOnConflict(
+            TABLE_DIAGNOSTICS, null, values, SQLiteDatabase.CONFLICT_REPLACE
+        )
+    }
+
+    data class DiagnosticEntry(
+        val hookId: String,
+        val status: String,
+        val message: String?,
+        val timestamp: Long
+    )
+
+    fun getDiagnostics(packageName: String): List<DiagnosticEntry> {
+        val result = mutableListOf<DiagnosticEntry>()
+        readableDatabase.query(
+            TABLE_DIAGNOSTICS, arrayOf("hookId", "status", "message", "timestamp"),
+            "package = ?", arrayOf(packageName),
+            null, null, "timestamp DESC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                result.add(
+                    DiagnosticEntry(
+                        hookId = cursor.getString(0),
+                        status = cursor.getString(1),
+                        message = cursor.getString(2),
+                        timestamp = cursor.getLong(3)
+                    )
+                )
+            }
+        }
+        return result
     }
 }

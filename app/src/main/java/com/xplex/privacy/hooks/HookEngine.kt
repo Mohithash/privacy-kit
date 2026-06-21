@@ -36,8 +36,16 @@ class HookEngine(private val context: Context, moduleAssets: android.content.res
                 } else {
                     installMethodHook(packageName, classLoader, definition)
                 }
+                SettingsClient.recordDiagnostic(
+                    context, packageName, definition.id,
+                    com.xplex.privacy.data.SettingsDatabase.STATUS_INSTALLED, null
+                )
             } catch (t: Throwable) {
                 Log.e(TAG, "Failed to install hook ${definition.id} for $packageName", t)
+                SettingsClient.recordDiagnostic(
+                    context, packageName, definition.id,
+                    com.xplex.privacy.data.SettingsDatabase.STATUS_FAILED, t.toString()
+                )
             }
         }
     }
