@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "XPL-EX"
+rootProject.name = "PrivacyKit"
 include(":app")

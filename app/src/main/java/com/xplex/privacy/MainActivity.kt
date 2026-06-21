@@ -36,7 +36,7 @@ fun WelcomeScreen() {
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text("XPL-EX scaffold is alive.")
+        Text("Privacy Kit scaffold is alive.")
     }
 }
 
