@@ -61,6 +61,8 @@ class ProfileRepository(private val context: Context) {
 
     fun listPresetNames(): List<String> = SettingsClient.listPresets(context)
 
+    fun configuredPackages(): List<String> = SettingsClient.listConfiguredPackages(context)
+
     fun deletePreset(presetName: String) {
         SettingsClient.deletePreset(context, presetName)
     }

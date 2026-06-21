@@ -121,4 +121,10 @@ object SettingsClient {
     fun deletePreset(context: Context, presetName: String) {
         call(context, METHOD_DELETE_PRESET, context.packageName) { putString(ARG_PRESET_NAME, presetName) }
     }
+
+    /** One query for dashboard stats, instead of one IPC round trip per installed app. */
+    fun listConfiguredPackages(context: Context): List<String> {
+        val result = call(context, METHOD_LIST_CONFIGURED_PACKAGES, context.packageName) ?: return emptyList()
+        return result.getStringArray("packages")?.toList() ?: emptyList()
+    }
 }

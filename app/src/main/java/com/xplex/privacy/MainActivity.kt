@@ -1,32 +1,21 @@
 package com.xplex.privacy
 
-import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,10 +24,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import com.xplex.privacy.hooks.HookDefinition
 import com.xplex.privacy.hooks.HookRegistry
 import com.xplex.privacy.profile.ProfileRepository
+import com.xplex.privacy.ui.AppListScreen
+import com.xplex.privacy.ui.DashboardStats
+import com.xplex.privacy.ui.HomeScreen
+import com.xplex.privacy.ui.PresetsScreen
+import com.xplex.privacy.ui.ProfileEditorScreen
+import com.xplex.privacy.ui.theme.XplexTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,343 +46,76 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private enum class Tab(val label: String) { HOME("Home"), APPS("Apps"), PRESETS("Presets") }
+
 private sealed interface Screen {
-    data object AppList : Screen
+    data object Main : Screen
     data class ProfileEditor(val packageName: String, val appLabel: String) : Screen
 }
 
 @Composable
 fun PrivacyKitApp() {
-    var screen by rememberSaveable(stateSaver = androidx.compose.runtime.saveable.mapSaver(
-        save = { mapOf("packageName" to ((it as? Screen.ProfileEditor)?.packageName ?: "")) },
-        restore = { if ((it["packageName"] as? String).isNullOrEmpty()) Screen.AppList else Screen.ProfileEditor(it["packageName"] as String, "") }
-    )) { mutableStateOf<Screen>(Screen.AppList) }
+    val context = LocalContext.current
+    val repository = remember { ProfileRepository(context) }
+
+    var screen by remember { mutableStateOf<Screen>(Screen.Main) }
+    var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
 
     when (val current = screen) {
-        is Screen.AppList -> AppListScreen(onAppSelected = { packageName, label ->
-            screen = Screen.ProfileEditor(packageName, label)
-        })
         is Screen.ProfileEditor -> ProfileEditorScreen(
             packageName = current.packageName,
             appLabel = current.appLabel,
-            onBack = { screen = Screen.AppList }
+            onBack = { screen = Screen.Main }
         )
-    }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AppListScreen(onAppSelected: (String, String) -> Unit) {
-    val context = LocalContext.current
-    var query by rememberSaveable { mutableStateOf("") }
-
-    val apps = remember {
-        context.packageManager.getInstalledApplications(0)
-            .filter { it.packageName != context.packageName }
-            .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 || (it.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0 }
-            .map { it.packageName to it.loadLabel(context.packageManager).toString() }
-            .sortedBy { it.second.lowercase() }
-    }
-
-    val filtered = remember(query, apps) {
-        if (query.isBlank()) apps else apps.filter { it.second.contains(query, ignoreCase = true) }
-    }
-
-    Scaffold(topBar = {
-        TopAppBar(title = { Text("Privacy Kit") })
-    }) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            TextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                placeholder = { Text("Search apps") }
-            )
-            LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
-                items(filtered, key = { it.first }) { (packageName, label) ->
-                    ListItem(
-                        headlineContent = { Text(label) },
-                        supportingContent = { Text(packageName) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onAppSelected(packageName, label) }
+        is Screen.Main -> Scaffold(
+            bottomBar = {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = tab == Tab.HOME,
+                        onClick = { tab = Tab.HOME },
+                        icon = { Icon(Icons.Filled.Home, contentDescription = null) },
+                        label = { Text(Tab.HOME.label) }
                     )
-                    androidx.compose.material3.HorizontalDivider()
+                    NavigationBarItem(
+                        selected = tab == Tab.APPS,
+                        onClick = { tab = Tab.APPS },
+                        icon = { Icon(Icons.Filled.Apps, contentDescription = null) },
+                        label = { Text(Tab.APPS.label) }
+                    )
+                    NavigationBarItem(
+                        selected = tab == Tab.PRESETS,
+                        onClick = { tab = Tab.PRESETS },
+                        icon = { Icon(Icons.Filled.Bookmarks, contentDescription = null) },
+                        label = { Text(Tab.PRESETS.label) }
+                    )
                 }
             }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ProfileEditorScreen(packageName: String, appLabel: String, onBack: () -> Unit) {
-    val context = LocalContext.current
-    val repository = remember { ProfileRepository(context) }
-    val allHooks = remember { HookRegistry.loadAll(context.assets) }
-
-    var currentValues by remember(packageName) {
-        mutableStateOf(repository.currentValues(packageName))
-    }
-    var enabledIds by remember(packageName) {
-        mutableStateOf(repository.enabledHookIds(packageName))
-    }
-    var diagnostics by remember(packageName) {
-        mutableStateOf(com.xplex.privacy.data.SettingsClient.getDiagnostics(context, packageName))
-    }
-    var statusMessage by remember { mutableStateOf<String?>(null) }
-    var presetNames by remember { mutableStateOf(repository.listPresetNames()) }
-    var newPresetName by rememberSaveable { mutableStateOf("") }
-
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        try {
-            context.contentResolver.openOutputStream(uri)?.use { stream ->
-                stream.write(repository.exportAllPresetsAsJson().toByteArray())
-            }
-            statusMessage = "Presets exported"
-        } catch (t: Throwable) {
-            statusMessage = "Export failed: ${t.message}"
-        }
-    }
-
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        try {
-            val text = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
-            if (text == null) {
-                statusMessage = "Import failed: couldn't read file"
-            } else {
-                val count = repository.importPresetsFromJson(text)
-                presetNames = repository.listPresetNames()
-                statusMessage = "Imported $count preset(s)"
-            }
-        } catch (t: Throwable) {
-            statusMessage = "Import failed: ${t.message}"
-        }
-    }
-
-    fun refresh() {
-        currentValues = repository.currentValues(packageName)
-        enabledIds = repository.enabledHookIds(packageName)
-        diagnostics = com.xplex.privacy.data.SettingsClient.getDiagnostics(context, packageName)
-        presetNames = repository.listPresetNames()
-    }
-
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(appLabel.ifBlank { packageName }) },
-            navigationIcon = {
-                TextButton(onClick = onBack) { Text("Back") }
-            }
-        )
-    }) { padding ->
-        Column(
-            modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(packageName, style = MaterialTheme.typography.bodySmall)
-
-            Button(
-                onClick = {
-                    repository.applyRandomProfile(packageName, allHooks)
-                    refresh()
-                    statusMessage = "Randomized fingerprint applied"
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Randomize all values")
-            }
-
-            OutlinedButton(
-                onClick = {
-                    repository.reset(packageName)
-                    refresh()
-                    statusMessage = "Profile reset"
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Reset profile")
-            }
-
-            statusMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-
-            Text("Presets", style = MaterialTheme.typography.titleMedium)
-
-            androidx.compose.foundation.layout.Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                TextField(
-                    value = newPresetName,
-                    onValueChange = { newPresetName = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Preset name") },
-                    singleLine = true
-                )
-                Button(
-                    onClick = {
-                        repository.saveAsPreset(packageName, newPresetName)
-                        statusMessage = "Saved preset \"$newPresetName\""
-                        newPresetName = ""
-                        refresh()
-                    },
-                    enabled = newPresetName.isNotBlank()
-                ) {
-                    Text("Save")
-                }
-            }
-
-            androidx.compose.foundation.layout.Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { exportLauncher.launch("privacy-kit-presets.json") },
-                    modifier = Modifier.weight(1f),
-                    enabled = presetNames.isNotEmpty()
-                ) {
-                    Text("Export presets")
-                }
-                OutlinedButton(
-                    onClick = { importLauncher.launch(arrayOf("application/json")) },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Import presets")
-                }
-            }
-
-            if (presetNames.isEmpty()) {
-                Text("No saved presets yet", style = MaterialTheme.typography.bodySmall)
-            } else {
-                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    presetNames.forEach { presetName ->
-                        androidx.compose.foundation.layout.Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                        ) {
-                            Text(presetName, style = MaterialTheme.typography.bodyMedium)
-                            androidx.compose.foundation.layout.Row {
-                                TextButton(onClick = {
-                                    repository.applyPreset(packageName, presetName, allHooks)
-                                    statusMessage = "Applied preset \"$presetName\""
-                                    refresh()
-                                }) { Text("Apply") }
-                                TextButton(onClick = {
-                                    repository.deletePreset(presetName)
-                                    refresh()
-                                }) { Text("Delete") }
-                            }
+        ) { padding ->
+            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+                when (tab) {
+                    Tab.HOME -> {
+                        val stats = remember {
+                            DashboardStats(
+                                configuredAppCount = repository.configuredPackages().size,
+                                totalHookCount = HookRegistry.loadAll(context.assets).size,
+                                presetCount = repository.listPresetNames().size
+                            )
                         }
-                    }
-                }
-            }
-
-            val failed = diagnostics.filter { it.status == com.xplex.privacy.data.SettingsDatabase.STATUS_FAILED }
-            if (failed.isNotEmpty()) {
-                Text(
-                    "${failed.size} hook(s) failed to install on this app - they had no effect",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
-                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    failed.forEach { entry ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                Text(entry.hookId, style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    entry.message ?: "unknown error",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Text("Current values", style = MaterialTheme.typography.titleMedium)
-
-            val groupedHooks = remember(allHooks) { allHooks.groupBy { it.categoryLabel } }
-
-            LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                groupedHooks.forEach { (category, hooksInCategory) ->
-                    item(key = "header:$category") {
-                        Text(
-                            category,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 4.dp)
+                        HomeScreen(
+                            stats = stats,
+                            onBrowseApps = { tab = Tab.APPS },
+                            onBrowsePresets = { tab = Tab.PRESETS }
                         )
                     }
-                    items(hooksInCategory, key = { it.id }) { hook ->
-                        HookValueCard(
-                            hook = hook,
-                            value = currentValues[hook.id],
-                            enabled = hook.id in enabledIds,
-                            onSave = { newValue ->
-                                repository.setValue(packageName, hook.id, newValue)
-                                repository.setHookEnabled(packageName, hook.id, true)
-                                refresh()
-                                statusMessage = "Saved ${hook.id}"
-                            },
-                            onEnabledChange = { isEnabled ->
-                                repository.setHookEnabled(packageName, hook.id, isEnabled)
-                                refresh()
-                            }
-                        )
-                    }
+
+                    Tab.APPS -> AppListScreen(onAppSelected = { packageName, label ->
+                        screen = Screen.ProfileEditor(packageName, label)
+                    })
+
+                    Tab.PRESETS -> PresetsScreen()
                 }
             }
         }
     }
-}
-
-@Composable
-private fun HookValueCard(
-    hook: HookDefinition,
-    value: String?,
-    enabled: Boolean,
-    onSave: (String) -> Unit,
-    onEnabledChange: (Boolean) -> Unit
-) {
-    var editedValue by rememberSaveable(hook.id, value) { mutableStateOf(value.orEmpty()) }
-
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.foundation.layout.Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
-                Text(hook.description.ifBlank { hook.id }, style = MaterialTheme.typography.bodyMedium)
-                androidx.compose.material3.Switch(checked = enabled, onCheckedChange = onEnabledChange)
-            }
-
-            TextField(
-                value = editedValue,
-                onValueChange = { editedValue = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("real value passes through if unset") },
-                singleLine = true
-            )
-
-            TextButton(
-                onClick = { onSave(editedValue) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = editedValue.isNotBlank() && editedValue != value
-            ) {
-                Text("Save")
-            }
-        }
-    }
-}
-
-@Composable
-fun XplexTheme(content: @Composable () -> Unit) {
-    MaterialTheme(content = content)
 }

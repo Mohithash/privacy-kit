@@ -23,6 +23,7 @@ const val METHOD_SAVE_PRESET = "savePreset"
 const val METHOD_GET_PRESET = "getPreset"
 const val METHOD_LIST_PRESETS = "listPresets"
 const val METHOD_DELETE_PRESET = "deletePreset"
+const val METHOD_LIST_CONFIGURED_PACKAGES = "listConfiguredPackages"
 
 const val ARG_PACKAGE = "package"
 const val ARG_NAME = "name"
@@ -151,6 +152,10 @@ class PrivacyContentProvider : ContentProvider() {
                 val presetName = extras.getString(ARG_PRESET_NAME) ?: return null
                 db.deletePreset(presetName)
                 Bundle()
+            }
+
+            METHOD_LIST_CONFIGURED_PACKAGES -> Bundle().apply {
+                putStringArray("packages", db.listConfiguredPackages().toTypedArray())
             }
 
             else -> {

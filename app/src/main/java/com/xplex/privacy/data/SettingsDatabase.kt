@@ -134,6 +134,24 @@ class SettingsDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, nu
         )
     }
 
+    /**
+     * Distinct packages with at least one enabled hook - one query, used for
+     * dashboard stats so the home screen doesn't need an IPC round trip per
+     * installed app to figure out how many are configured.
+     */
+    fun listConfiguredPackages(): List<String> {
+        val result = mutableListOf<String>()
+        readableDatabase.query(
+            true, TABLE_ASSIGNMENTS, arrayOf("package"),
+            "enabled = 1", null, null, null, "package ASC", null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                result.add(cursor.getString(0))
+            }
+        }
+        return result
+    }
+
     fun resetPackage(packageName: String) {
         writableDatabase.delete(TABLE_SETTINGS, "package = ?", arrayOf(packageName))
         writableDatabase.delete(TABLE_ASSIGNMENTS, "package = ?", arrayOf(packageName))
