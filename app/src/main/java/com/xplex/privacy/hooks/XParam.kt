@@ -40,6 +40,22 @@ class XParam(
 
     fun getThis(): Any? = methodParam?.thisObject
 
+    /**
+     * Makes the hooked call throw instead of returning normally - set from
+     * a "before" hook to skip the real method entirely (e.g. making
+     * getPackageInfo() behave as if the package were never installed, by
+     * throwing NameNotFoundException rather than trying to filter a single
+     * return value the way list-returning methods are filtered).
+     */
+    fun setThrowable(throwable: Throwable) {
+        methodParam?.throwable = throwable
+    }
+
+    /** Throws PackageManager.NameNotFoundException(packageName) from this call. */
+    fun throwNameNotFound(missingPackageName: String) {
+        setThrowable(android.content.pm.PackageManager.NameNotFoundException(missingPackageName))
+    }
+
     fun getArgument(index: Int): Any? {
         val args = methodParam?.args ?: return null
         return if (index in args.indices) args[index] else null

@@ -17,6 +17,24 @@
       "enabled": true,
       "luaScript": "hide_packages",
       "description": "Removes packages listed in this hook's setting from getInstalledApplications() results."
+    },
+    {
+      "id": "pm.getPackageInfo",
+      "className": "android.app.ApplicationPackageManager",
+      "methodName": "getPackageInfo",
+      "parameterTypes": ["java.lang.String", "int"],
+      "enabled": true,
+      "luaScript": "hide_package_lookup",
+      "description": "Makes getPackageInfo() throw NameNotFoundException for packages listed in this hook's setting."
+    },
+    {
+      "id": "pm.getApplicationInfo",
+      "className": "android.app.ApplicationPackageManager",
+      "methodName": "getApplicationInfo",
+      "parameterTypes": ["java.lang.String", "int"],
+      "enabled": true,
+      "luaScript": "hide_package_lookup",
+      "description": "Makes getApplicationInfo() throw NameNotFoundException for packages listed in this hook's setting."
     }
   ]
 }
