@@ -46,4 +46,22 @@ class ProfileRepository(private val context: Context) {
     fun reset(packageName: String) {
         SettingsClient.resetPackage(context, packageName)
     }
+
+    /** Saves this app's currently-configured values as a reusable named preset. */
+    fun saveAsPreset(packageName: String, presetName: String) {
+        val values = currentValues(packageName).filterValues { it != null }.mapValues { it.value!! }
+        SettingsClient.savePreset(context, presetName, values)
+    }
+
+    /** Applies a previously-saved preset to a (possibly different) target app. */
+    fun applyPreset(packageName: String, presetName: String, allHooks: List<HookDefinition>) {
+        val values = SettingsClient.getPreset(context, presetName)
+        applyProfile(packageName, values, allHooks)
+    }
+
+    fun listPresetNames(): List<String> = SettingsClient.listPresets(context)
+
+    fun deletePreset(presetName: String) {
+        SettingsClient.deletePreset(context, presetName)
+    }
 }

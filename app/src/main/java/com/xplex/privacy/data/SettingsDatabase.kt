@@ -20,6 +20,7 @@ class SettingsDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, nu
         const val TABLE_SETTINGS = "settings"
         const val TABLE_ASSIGNMENTS = "assignments"
         const val TABLE_DIAGNOSTICS = "diagnostics"
+        const val TABLE_PRESETS = "presets"
 
         const val STATUS_INSTALLED = "installed"
         const val STATUS_FAILED = "failed"
@@ -49,6 +50,13 @@ class SettingsDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, nu
                 "message TEXT, " +
                 "timestamp INTEGER NOT NULL, " +
                 "PRIMARY KEY (package, hookId))"
+        )
+        db.execSQL(
+            "CREATE TABLE $TABLE_PRESETS (" +
+                "presetName TEXT NOT NULL, " +
+                "hookId TEXT NOT NULL, " +
+                "value TEXT, " +
+                "PRIMARY KEY (presetName, hookId))"
         )
     }
 
@@ -171,5 +179,55 @@ class SettingsDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, nu
             }
         }
         return result
+    }
+
+    /** Presets are global (not per-app) - reusable named fingerprint configs. */
+    fun savePreset(presetName: String, values: Map<String, String>) {
+        writableDatabase.delete(TABLE_PRESETS, "presetName = ?", arrayOf(presetName))
+        writableDatabase.beginTransaction()
+        try {
+            for ((hookId, value) in values) {
+                val row = ContentValues().apply {
+                    put("presetName", presetName)
+                    put("hookId", hookId)
+                    put("value", value)
+                }
+                writableDatabase.insertWithOnConflict(TABLE_PRESETS, null, row, SQLiteDatabase.CONFLICT_REPLACE)
+            }
+            writableDatabase.setTransactionSuccessful()
+        } finally {
+            writableDatabase.endTransaction()
+        }
+    }
+
+    fun getPreset(presetName: String): Map<String, String> {
+        val result = LinkedHashMap<String, String>()
+        readableDatabase.query(
+            TABLE_PRESETS, arrayOf("hookId", "value"),
+            "presetName = ?", arrayOf(presetName),
+            null, null, null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                result[cursor.getString(0)] = cursor.getString(1)
+            }
+        }
+        return result
+    }
+
+    fun listPresetNames(): List<String> {
+        val result = mutableListOf<String>()
+        readableDatabase.query(
+            true, TABLE_PRESETS, arrayOf("presetName"),
+            null, null, null, null, "presetName ASC", null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                result.add(cursor.getString(0))
+            }
+        }
+        return result
+    }
+
+    fun deletePreset(presetName: String) {
+        writableDatabase.delete(TABLE_PRESETS, "presetName = ?", arrayOf(presetName))
     }
 }

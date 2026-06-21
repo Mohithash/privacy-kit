@@ -91,4 +91,34 @@ object SettingsClient {
             DiagnosticEntry(hookIds[i], statuses[i], messages.getOrNull(i)?.ifBlank { null }, timestamps[i])
         }
     }
+
+    /**
+     * Presets are global, not per-app - always called with this app's own
+     * package as the acting identity, which [PrivacyContentProvider.verifyCaller]
+     * permits since the management app legitimately owns that package.
+     */
+    fun savePreset(context: Context, presetName: String, values: Map<String, String>) {
+        call(context, METHOD_SAVE_PRESET, context.packageName) {
+            putString(ARG_PRESET_NAME, presetName)
+            putStringArray("hookIds", values.keys.toTypedArray())
+            putStringArray("values", values.values.toTypedArray())
+        }
+    }
+
+    fun getPreset(context: Context, presetName: String): Map<String, String> {
+        val result = call(context, METHOD_GET_PRESET, context.packageName) { putString(ARG_PRESET_NAME, presetName) }
+            ?: return emptyMap()
+        val hookIds = result.getStringArray("hookIds") ?: return emptyMap()
+        val values = result.getStringArray("values") ?: return emptyMap()
+        return hookIds.indices.associate { hookIds[it] to values[it] }
+    }
+
+    fun listPresets(context: Context): List<String> {
+        val result = call(context, METHOD_LIST_PRESETS, context.packageName) ?: return emptyList()
+        return result.getStringArray("presetNames")?.toList() ?: emptyList()
+    }
+
+    fun deletePreset(context: Context, presetName: String) {
+        call(context, METHOD_DELETE_PRESET, context.packageName) { putString(ARG_PRESET_NAME, presetName) }
+    }
 }

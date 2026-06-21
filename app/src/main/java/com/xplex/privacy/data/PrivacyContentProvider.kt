@@ -19,6 +19,10 @@ const val METHOD_SET_HOOK_ENABLED = "setHookEnabled"
 const val METHOD_RESET_PACKAGE = "resetPackage"
 const val METHOD_RECORD_DIAGNOSTIC = "recordDiagnostic"
 const val METHOD_GET_DIAGNOSTICS = "getDiagnostics"
+const val METHOD_SAVE_PRESET = "savePreset"
+const val METHOD_GET_PRESET = "getPreset"
+const val METHOD_LIST_PRESETS = "listPresets"
+const val METHOD_DELETE_PRESET = "deletePreset"
 
 const val ARG_PACKAGE = "package"
 const val ARG_NAME = "name"
@@ -27,6 +31,7 @@ const val ARG_HOOK_ID = "hookId"
 const val ARG_ENABLED = "enabled"
 const val ARG_STATUS = "status"
 const val ARG_MESSAGE = "message"
+const val ARG_PRESET_NAME = "presetName"
 
 /**
  * Exposed as eu.faircode-style cross-process IPC: hooked apps call in to
@@ -120,6 +125,32 @@ class PrivacyContentProvider : ContentProvider() {
                 putStringArray("statuses", entries.map { it.status }.toTypedArray())
                 putStringArray("messages", entries.map { it.message ?: "" }.toTypedArray())
                 putLongArray("timestamps", entries.map { it.timestamp }.toLongArray())
+            }
+
+            METHOD_SAVE_PRESET -> {
+                val presetName = extras.getString(ARG_PRESET_NAME) ?: return null
+                val hookIds = extras.getStringArray("hookIds") ?: return null
+                val values = extras.getStringArray("values") ?: return null
+                val map = hookIds.indices.associate { hookIds[it] to values[it] }
+                db.savePreset(presetName, map)
+                Bundle()
+            }
+
+            METHOD_GET_PRESET -> Bundle().apply {
+                val presetName = extras.getString(ARG_PRESET_NAME) ?: return null
+                val map = db.getPreset(presetName)
+                putStringArray("hookIds", map.keys.toTypedArray())
+                putStringArray("values", map.values.toTypedArray())
+            }
+
+            METHOD_LIST_PRESETS -> Bundle().apply {
+                putStringArray("presetNames", db.listPresetNames().toTypedArray())
+            }
+
+            METHOD_DELETE_PRESET -> {
+                val presetName = extras.getString(ARG_PRESET_NAME) ?: return null
+                db.deletePreset(presetName)
+                Bundle()
             }
 
             else -> {

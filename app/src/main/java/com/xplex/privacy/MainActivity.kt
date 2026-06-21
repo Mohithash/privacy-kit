@@ -136,11 +136,14 @@ fun ProfileEditorScreen(packageName: String, appLabel: String, onBack: () -> Uni
         mutableStateOf(com.xplex.privacy.data.SettingsClient.getDiagnostics(context, packageName))
     }
     var statusMessage by remember { mutableStateOf<String?>(null) }
+    var presetNames by remember { mutableStateOf(repository.listPresetNames()) }
+    var newPresetName by rememberSaveable { mutableStateOf("") }
 
     fun refresh() {
         currentValues = repository.currentValues(packageName)
         enabledIds = repository.enabledHookIds(packageName)
         diagnostics = com.xplex.privacy.data.SettingsClient.getDiagnostics(context, packageName)
+        presetNames = repository.listPresetNames()
     }
 
     Scaffold(topBar = {
@@ -180,6 +183,59 @@ fun ProfileEditorScreen(packageName: String, appLabel: String, onBack: () -> Uni
             }
 
             statusMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+
+            Text("Presets", style = MaterialTheme.typography.titleMedium)
+
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextField(
+                    value = newPresetName,
+                    onValueChange = { newPresetName = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Preset name") },
+                    singleLine = true
+                )
+                Button(
+                    onClick = {
+                        repository.saveAsPreset(packageName, newPresetName)
+                        statusMessage = "Saved preset \"$newPresetName\""
+                        newPresetName = ""
+                        refresh()
+                    },
+                    enabled = newPresetName.isNotBlank()
+                ) {
+                    Text("Save")
+                }
+            }
+
+            if (presetNames.isEmpty()) {
+                Text("No saved presets yet", style = MaterialTheme.typography.bodySmall)
+            } else {
+                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    presetNames.forEach { presetName ->
+                        androidx.compose.foundation.layout.Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        ) {
+                            Text(presetName, style = MaterialTheme.typography.bodyMedium)
+                            androidx.compose.foundation.layout.Row {
+                                TextButton(onClick = {
+                                    repository.applyPreset(packageName, presetName, allHooks)
+                                    statusMessage = "Applied preset \"$presetName\""
+                                    refresh()
+                                }) { Text("Apply") }
+                                TextButton(onClick = {
+                                    repository.deletePreset(presetName)
+                                    refresh()
+                                }) { Text("Delete") }
+                            }
+                        }
+                    }
+                }
+            }
 
             val failed = diagnostics.filter { it.status == com.xplex.privacy.data.SettingsDatabase.STATUS_FAILED }
             if (failed.isNotEmpty()) {
