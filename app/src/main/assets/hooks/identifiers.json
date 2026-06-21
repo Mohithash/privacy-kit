@@ -1,0 +1,76 @@
+{
+  "hooks": [
+    {
+      "id": "telephony.deviceId",
+      "className": "android.telephony.TelephonyManager",
+      "methodName": "getDeviceId",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override",
+      "description": "Spoofs TelephonyManager.getDeviceId() (legacy IMEI/MEID accessor)."
+    },
+    {
+      "id": "telephony.imei",
+      "className": "android.telephony.TelephonyManager",
+      "methodName": "getImei",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override",
+      "description": "Spoofs TelephonyManager.getImei()."
+    },
+    {
+      "id": "telephony.subscriberId",
+      "className": "android.telephony.TelephonyManager",
+      "methodName": "getSubscriberId",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override",
+      "description": "Spoofs TelephonyManager.getSubscriberId() (IMSI)."
+    },
+    {
+      "id": "telephony.simSerialNumber",
+      "className": "android.telephony.TelephonyManager",
+      "methodName": "getSimSerialNumber",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override",
+      "description": "Spoofs TelephonyManager.getSimSerialNumber() (ICCID)."
+    },
+    {
+      "id": "telephony.line1Number",
+      "className": "android.telephony.TelephonyManager",
+      "methodName": "getLine1Number",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override",
+      "description": "Spoofs TelephonyManager.getLine1Number() (own phone number)."
+    },
+    {
+      "id": "settings.androidId",
+      "className": "android.provider.Settings$Secure",
+      "methodName": "getString",
+      "parameterTypes": ["android.content.ContentResolver", "java.lang.String"],
+      "enabled": true,
+      "luaScript": "android_id",
+      "description": "Spoofs Settings.Secure.ANDROID_ID for this app."
+    },
+    {
+      "id": "wifi.macAddress",
+      "className": "android.net.wifi.WifiInfo",
+      "methodName": "getMacAddress",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override",
+      "description": "Spoofs WifiInfo.getMacAddress()."
+    },
+    {
+      "id": "bluetooth.address",
+      "className": "android.bluetooth.BluetoothAdapter",
+      "methodName": "getAddress",
+      "parameterTypes": [],
+      "enabled": true,
+      "luaScript": "value_override",
+      "description": "Spoofs BluetoothAdapter.getAddress()."
+    }
+  ]
+}

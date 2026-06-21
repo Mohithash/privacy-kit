@@ -1,0 +1,22 @@
+{
+  "hooks": [
+    {
+      "id": "pm.getInstalledPackages",
+      "className": "android.app.ApplicationPackageManager",
+      "methodName": "getInstalledPackages",
+      "parameterTypes": ["int"],
+      "enabled": true,
+      "luaScript": "hide_packages",
+      "description": "Removes packages listed in this hook's setting from getInstalledPackages() results."
+    },
+    {
+      "id": "pm.getInstalledApplications",
+      "className": "android.app.ApplicationPackageManager",
+      "methodName": "getInstalledApplications",
+      "parameterTypes": ["int"],
+      "enabled": true,
+      "luaScript": "hide_packages",
+      "description": "Removes packages listed in this hook's setting from getInstalledApplications() results."
+    }
+  ]
+}

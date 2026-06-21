@@ -57,4 +57,35 @@ class XParam(
     fun log(message: String) {
         Log.i(TAG, "[$packageName] $message")
     }
+
+    /**
+     * Removes entries from the method's List<PackageInfo>/List<ApplicationInfo>
+     * result whose package name is in [hiddenCsv] (comma-separated). Done in
+     * Kotlin rather than Lua because LuaJ's Java coercion only exposes
+     * methods through Lua's `:` call syntax, not public Java fields like
+     * PackageInfo.packageName - there's no clean way to read that field from
+     * a Lua loop.
+     */
+    fun filterPackageList(hiddenCsv: String?) {
+        if (hiddenCsv.isNullOrBlank()) return
+        val hidden = hiddenCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        if (hidden.isEmpty()) return
+
+        val result = methodParam?.result as? MutableList<*> ?: return
+        val iterator = result.iterator()
+        while (iterator.hasNext()) {
+            val entryPackageName = packageNameOf(iterator.next()) ?: continue
+            if (entryPackageName in hidden) iterator.remove()
+        }
+    }
+
+    private fun packageNameOf(item: Any?): String? = try {
+        when (item) {
+            is android.content.pm.PackageInfo -> item.packageName
+            is android.content.pm.ApplicationInfo -> item.packageName
+            else -> null
+        }
+    } catch (t: Throwable) {
+        null
+    }
 }
