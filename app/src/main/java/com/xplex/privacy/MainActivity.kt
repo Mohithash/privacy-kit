@@ -3,7 +3,9 @@ package com.xplex.privacy
 import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -139,6 +141,34 @@ fun ProfileEditorScreen(packageName: String, appLabel: String, onBack: () -> Uni
     var presetNames by remember { mutableStateOf(repository.listPresetNames()) }
     var newPresetName by rememberSaveable { mutableStateOf("") }
 
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        try {
+            context.contentResolver.openOutputStream(uri)?.use { stream ->
+                stream.write(repository.exportAllPresetsAsJson().toByteArray())
+            }
+            statusMessage = "Presets exported"
+        } catch (t: Throwable) {
+            statusMessage = "Export failed: ${t.message}"
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        try {
+            val text = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
+            if (text == null) {
+                statusMessage = "Import failed: couldn't read file"
+            } else {
+                val count = repository.importPresetsFromJson(text)
+                presetNames = repository.listPresetNames()
+                statusMessage = "Imported $count preset(s)"
+            }
+        } catch (t: Throwable) {
+            statusMessage = "Import failed: ${t.message}"
+        }
+    }
+
     fun refresh() {
         currentValues = repository.currentValues(packageName)
         enabledIds = repository.enabledHookIds(packageName)
@@ -210,6 +240,25 @@ fun ProfileEditorScreen(packageName: String, appLabel: String, onBack: () -> Uni
                 }
             }
 
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { exportLauncher.launch("privacy-kit-presets.json") },
+                    modifier = Modifier.weight(1f),
+                    enabled = presetNames.isNotEmpty()
+                ) {
+                    Text("Export presets")
+                }
+                OutlinedButton(
+                    onClick = { importLauncher.launch(arrayOf("application/json")) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Import presets")
+                }
+            }
+
             if (presetNames.isEmpty()) {
                 Text("No saved presets yet", style = MaterialTheme.typography.bodySmall)
             } else {
@@ -262,26 +311,38 @@ fun ProfileEditorScreen(packageName: String, appLabel: String, onBack: () -> Uni
 
             Text("Current values", style = MaterialTheme.typography.titleMedium)
 
+            val groupedHooks = remember(allHooks) { allHooks.groupBy { it.categoryLabel } }
+
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(allHooks, key = { it.id }) { hook ->
-                    HookValueCard(
-                        hook = hook,
-                        value = currentValues[hook.id],
-                        enabled = hook.id in enabledIds,
-                        onSave = { newValue ->
-                            repository.setValue(packageName, hook.id, newValue)
-                            repository.setHookEnabled(packageName, hook.id, true)
-                            refresh()
-                            statusMessage = "Saved ${hook.id}"
-                        },
-                        onEnabledChange = { isEnabled ->
-                            repository.setHookEnabled(packageName, hook.id, isEnabled)
-                            refresh()
-                        }
-                    )
+                groupedHooks.forEach { (category, hooksInCategory) ->
+                    item(key = "header:$category") {
+                        Text(
+                            category,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                    items(hooksInCategory, key = { it.id }) { hook ->
+                        HookValueCard(
+                            hook = hook,
+                            value = currentValues[hook.id],
+                            enabled = hook.id in enabledIds,
+                            onSave = { newValue ->
+                                repository.setValue(packageName, hook.id, newValue)
+                                repository.setHookEnabled(packageName, hook.id, true)
+                                refresh()
+                                statusMessage = "Saved ${hook.id}"
+                            },
+                            onEnabledChange = { isEnabled ->
+                                repository.setHookEnabled(packageName, hook.id, isEnabled)
+                                refresh()
+                            }
+                        )
+                    }
                 }
             }
         }

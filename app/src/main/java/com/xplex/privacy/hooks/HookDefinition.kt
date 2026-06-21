@@ -24,6 +24,26 @@ data class HookDefinition(
 ) {
     val isFieldHook: Boolean get() = methodName.startsWith("#")
     val fieldName: String get() = methodName.removePrefix("#")
+
+    /**
+     * Derived from the id's existing namespace prefix (e.g. "device.build.model"
+     * -> "device") rather than a separate JSON field - every hook id already
+     * has this structure, so there's nothing new to keep in sync when adding
+     * a hook.
+     */
+    val categoryKey: String get() = id.substringBefore('.', missingDelimiterValue = id)
+
+    val categoryLabel: String get() = when (categoryKey) {
+        "device" -> "Device fingerprint"
+        "telephony" -> "Telephony identifiers"
+        "settings" -> "System identifiers"
+        "wifi" -> "WiFi"
+        "bluetooth" -> "Bluetooth"
+        "pm" -> "App visibility"
+        "location" -> "Location"
+        "ads" -> "Advertising"
+        else -> categoryKey.replaceFirstChar { it.uppercase() }
+    }
 }
 
 @Serializable

@@ -64,4 +64,24 @@ class ProfileRepository(private val context: Context) {
     fun deletePreset(presetName: String) {
         SettingsClient.deletePreset(context, presetName)
     }
+
+    /** Serializes every saved preset to JSON, for writing to a file the user picks. */
+    fun exportAllPresetsAsJson(): String {
+        val presets = listPresetNames().associateWith { SettingsClient.getPreset(context, it) }
+        return PresetExport.encode(presets)
+    }
+
+    /**
+     * Parses [json] and saves every preset it contains, overwriting any
+     * existing preset with the same name. Throws on malformed input rather
+     * than silently importing nothing - the caller (UI) decides how to
+     * surface that to the user.
+     */
+    fun importPresetsFromJson(json: String): Int {
+        val presets = PresetExport.decode(json)
+        for ((name, values) in presets) {
+            SettingsClient.savePreset(context, name, values)
+        }
+        return presets.size
+    }
 }

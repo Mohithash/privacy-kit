@@ -90,4 +90,30 @@ class HookDefinitionTest {
         assertEquals(1, parsed.hooks.size)
         assertEquals("device.build.model", parsed.hooks[0].id)
     }
+
+    @Test
+    fun `category is derived from the id namespace prefix`() {
+        val cases = mapOf(
+            "device.build.model" to ("device" to "Device fingerprint"),
+            "telephony.imei" to ("telephony" to "Telephony identifiers"),
+            "settings.androidId" to ("settings" to "System identifiers"),
+            "wifi.macAddress" to ("wifi" to "WiFi"),
+            "bluetooth.address" to ("bluetooth" to "Bluetooth"),
+            "pm.getInstalledPackages" to ("pm" to "App visibility"),
+            "location.isFromMockProvider" to ("location" to "Location"),
+            "ads.advertisingId" to ("ads" to "Advertising")
+        )
+        for ((id, expected) in cases) {
+            val hook = HookDefinition(id = id, className = "x.Y", methodName = "m", luaScript = "s")
+            assertEquals("category for $id", expected.first, hook.categoryKey)
+            assertEquals("label for $id", expected.second, hook.categoryLabel)
+        }
+    }
+
+    @Test
+    fun `unknown category falls back to capitalized prefix`() {
+        val hook = HookDefinition(id = "sensor.accelerometer", className = "x.Y", methodName = "m", luaScript = "s")
+        assertEquals("sensor", hook.categoryKey)
+        assertEquals("Sensor", hook.categoryLabel)
+    }
 }
